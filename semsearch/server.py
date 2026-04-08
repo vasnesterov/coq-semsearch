@@ -38,6 +38,7 @@ class SearchRequest(BaseModel):
     query: str
     k: int = DEFAULT_K
     library: str | None = None
+    kind: str | None = None  # theorem, definition, type, class, axiom
 
 
 class SearchResponse(BaseModel):
@@ -56,16 +57,17 @@ def search_get(
     q: str = Query(..., description="Search query"),
     k: int = Query(DEFAULT_K, description="Number of results"),
     library: str | None = Query(None, description="Filter by library"),
+    kind: str | None = Query(None, description="Filter by kind: theorem, definition, type, class, axiom"),
 ) -> SearchResponse:
     assert engine is not None
-    results = engine.search(q, k=k, library=library)
+    results = engine.search(q, k=k, library=library, kind=kind)
     return SearchResponse(results=results, query=q, total=len(results))
 
 
 @app.post("/search")
 def search_post(req: SearchRequest) -> SearchResponse:
     assert engine is not None
-    results = engine.search(req.query, k=req.k, library=req.library)
+    results = engine.search(req.query, k=req.k, library=req.library, kind=req.kind)
     return SearchResponse(results=results, query=req.query, total=len(results))
 
 

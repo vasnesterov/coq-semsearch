@@ -10,7 +10,7 @@ from rich.console import Console
 from rich.progress import Progress
 from sentence_transformers import SentenceTransformer
 
-from semsearch.config import DATA_DIR, EMBEDDING_DIM, EMBEDDING_MODEL
+from semsearch.config import DATA_DIR, EMBEDDING_DIM, EMBEDDING_DOC_PROMPT, EMBEDDING_MODEL, EMBEDDING_QUERY_PROMPT
 
 console = Console()
 
@@ -50,7 +50,7 @@ def make_embedding_text(decl: dict) -> str:
     return f"{decl['name']}: {type_str}"
 
 
-def build_index(data_dir: Path | None = None) -> None:
+def build_index(data_dir: Path | None = None, doc_prompt: bool = True) -> None:
     """Build FAISS index from all extracted declarations."""
     if data_dir is None:
         data_dir = DATA_DIR
@@ -70,12 +70,10 @@ def build_index(data_dir: Path | None = None) -> None:
     model = SentenceTransformer(EMBEDDING_MODEL)
 
     console.print("Encoding declarations...")
-    embeddings = model.encode(
-        texts,
-        show_progress_bar=True,
-        batch_size=256,
-        normalize_embeddings=True,
-    )
+    encode_kwargs: dict = dict(show_progress_bar=True, batch_size=8, normalize_embeddings=True)
+    if doc_prompt:
+        encode_kwargs["prompt"] = EMBEDDING_DOC_PROMPT
+    embeddings = model.encode(texts, **encode_kwargs)
     embeddings = np.array(embeddings, dtype=np.float32)
 
     console.print(f"Embeddings shape: {embeddings.shape}")
@@ -104,9 +102,10 @@ def main() -> None:
 
     parser = argparse.ArgumentParser(description="Build search index from extracted declarations")
     parser.add_argument("--data-dir", type=Path, default=DATA_DIR)
+    parser.add_argument("--no-doc-prompt", action="store_true", help="Disable document-side instruction prompt")
     args = parser.parse_args()
 
-    build_index(args.data_dir)
+    build_index(args.data_dir, doc_prompt=not args.no_doc_prompt)
 
 
 if __name__ == "__main__":

@@ -122,30 +122,30 @@ def parse_search_output(output: str) -> list[tuple[str, str]]:
     return declarations
 
 
-def parse_v_file_docstrings(v_path: Path) -> tuple[str | None, dict[str, str]]:
-    """Parse a .v file to extract docstrings.
+def parse_v_file_docstrings(v_path: Path) -> tuple[str | None, dict[str, str], dict[str, str]]:
+    """Parse a .v file to extract docstrings and declaration kinds.
 
-    Returns (file_docstring, {decl_name: docstring}).
+    Returns (file_docstring, {decl_name: docstring}, {decl_name: kind}).
     """
     if not v_path.exists():
-        return None, {}
+        return None, {}, {}
 
     try:
         text = v_path.read_text(errors="replace")
     except Exception:
-        return None, {}
+        return None, {}, {}
 
     file_doc = None
     decl_docs: dict[str, str] = {}
+    decl_kinds: dict[str, str] = {}
 
     # Extract all doc comments: (** ... *)
     doc_pattern = re.compile(r"\(\*\*\s(.*?)\*\)", re.DOTALL)
-    # Declaration patterns
+    # Declaration patterns — group(1) = keyword, group(2) = name
     decl_pattern = re.compile(
-        r"^(?:Theorem|Lemma|Definition|Fixpoint|CoFixpoint|Inductive|CoInductive|"
+        r"^(Theorem|Lemma|Definition|Fixpoint|CoFixpoint|Inductive|CoInductive|"
         r"Record|Structure|Class|Instance|Axiom|Parameter|Hypothesis|Variable|"
-        r"Coercion|Canonical|Notation|Program\s+\w+|#\[global\]\s+Instance|"
-        r"Fact|Remark|Corollary|Proposition|Property|Example)\s+(\w+)",
+        r"Coercion|Canonical|Notation|Fact|Remark|Corollary|Proposition|Property|Example)\s+(\w+)",
         re.MULTILINE,
     )
 
@@ -154,10 +154,13 @@ def parse_v_file_docstrings(v_path: Path) -> tuple[str | None, dict[str, str]]:
     if first_doc and first_doc.start() < 200:  # Near start of file
         file_doc = first_doc.group(1).strip()
 
-    # For each declaration, look for a doc comment immediately before it
+    # For each declaration, record kind and look for a preceding doc comment
     for decl_match in decl_pattern.finditer(text):
-        decl_name = decl_match.group(1)
+        keyword = decl_match.group(1)
+        decl_name = decl_match.group(2)
         decl_start = decl_match.start()
+
+        decl_kinds[decl_name] = keyword
 
         # Look backwards for a doc comment ending just before this declaration
         preceding = text[max(0, decl_start - 500) : decl_start].rstrip()
@@ -169,7 +172,7 @@ def parse_v_file_docstrings(v_path: Path) -> tuple[str | None, dict[str, str]]:
             if not between:  # Only whitespace between doc and decl
                 decl_docs[decl_name] = last_doc.group(1).strip()
 
-    return file_doc, decl_docs
+    return file_doc, decl_docs, decl_kinds
 
 
 def extract_library(
@@ -221,18 +224,19 @@ def extract_library(
                 v_path = vo_path.with_suffix(".v")
                 if v_path not in v_file_cache:
                     v_file_cache[v_path] = parse_v_file_docstrings(v_path)
-                file_doc, decl_docs = v_file_cache[v_path]
+                file_doc, decl_docs, decl_kinds = v_file_cache[v_path]
 
                 for name, type_str in decls:
                     if name in all_decls:
                         continue  # deduplicate
 
-                    # Extract short name for docstring lookup
+                    # Extract short name for docstring/kind lookup
                     short_name = name.rsplit(".", 1)[-1] if "." in name else name
 
                     all_decls[name] = Declaration(
                         name=name,
                         type=type_str,
+                        kind=decl_kinds.get(short_name),
                         library=library,
                         module=module_path,
                         source_file=str(v_path) if v_path.exists() else None,

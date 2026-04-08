@@ -28,8 +28,10 @@ LIBRARIES: dict[str, Path] = {
 }
 
 # Embedding model
-EMBEDDING_MODEL = "all-MiniLM-L6-v2"
-EMBEDDING_DIM = 384
+EMBEDDING_MODEL = "intfloat/e5-mistral-7b-instruct"
+EMBEDDING_DIM = 4096
+EMBEDDING_QUERY_PROMPT = "Instruct: Given a Coq theorem prover query, retrieve relevant declarations\nQuery: "
+EMBEDDING_DOC_PROMPT = "Instruct: Retrieve declarations stated in bilingual Coq + natural language that are relevent equivalent to the given one\nDoc: "
 
 # Search defaults
 DEFAULT_K = 10
