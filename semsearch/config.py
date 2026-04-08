@@ -28,10 +28,10 @@ LIBRARIES: dict[str, Path] = {
 }
 
 # Embedding model
-EMBEDDING_MODEL = "intfloat/e5-mistral-7b-instruct"
+EMBEDDING_MODEL = "Qwen/Qwen3-Embedding-8B"
 EMBEDDING_DIM = 4096
 EMBEDDING_QUERY_PROMPT = "Instruct: Given a Coq theorem prover query, retrieve relevant declarations\nQuery: "
-EMBEDDING_DOC_PROMPT = "Instruct: Retrieve declarations stated in bilingual Coq + natural language that are relevent equivalent to the given one\nDoc: "
+EMBEDDING_DOC_PROMPT = None  # Qwen3-Embedding: instructions on queries only, documents plain
 
 # Search defaults
 DEFAULT_K = 10

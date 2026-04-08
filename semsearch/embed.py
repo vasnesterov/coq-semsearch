@@ -67,11 +67,11 @@ def build_index(data_dir: Path | None = None, doc_prompt: bool = True) -> None:
 
     # Load model and encode
     console.print(f"Loading embedding model: {EMBEDDING_MODEL}")
-    model = SentenceTransformer(EMBEDDING_MODEL)
+    model = SentenceTransformer(EMBEDDING_MODEL, trust_remote_code=True)
 
     console.print("Encoding declarations...")
     encode_kwargs: dict = dict(show_progress_bar=True, batch_size=8, normalize_embeddings=True)
-    if doc_prompt:
+    if doc_prompt and EMBEDDING_DOC_PROMPT:
         encode_kwargs["prompt"] = EMBEDDING_DOC_PROMPT
     embeddings = model.encode(texts, **encode_kwargs)
     embeddings = np.array(embeddings, dtype=np.float32)

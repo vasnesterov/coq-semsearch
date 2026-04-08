@@ -56,7 +56,7 @@ class SearchEngine:
                 if line:
                     self.metadata.append(json.loads(line))
 
-        self.model = SentenceTransformer(EMBEDDING_MODEL)
+        self.model = SentenceTransformer(EMBEDDING_MODEL, trust_remote_code=True)
 
         # Build BM25 index from the same texts used for embedding
         texts = [_make_text(m) for m in self.metadata]
